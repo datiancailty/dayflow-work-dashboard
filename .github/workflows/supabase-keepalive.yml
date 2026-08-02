@@ -1,0 +1,32 @@
+name: Keep Supabase project active
+
+on:
+  schedule:
+    # Every 3 days at 09:15 UTC (17:15 China Standard Time)
+    - cron: "15 9 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping Supabase health endpoint
+        env:
+          SUPABASE_URL: https://shfdpceuamzrftwufdwo.supabase.co
+          SUPABASE_KEY: sb_publishable_FFw_Jrti_ezW0SNA_4Kj-Q_JhVPUSM8
+        run: |
+          set -euo pipefail
+          status=$(curl --silent --show-error --output /tmp/supabase-health.json \
+            --write-out '%{http_code}' \
+            --header "apikey: ${SUPABASE_KEY}" \
+            --header "Accept: application/json" \
+            "${SUPABASE_URL}/auth/v1/health")
+          printf 'Supabase health endpoint HTTP status: %s\n' "$status"
+          printf 'Response: '
+          tr '\n' ' ' < /tmp/supabase-health.json
+          printf '\n'
+          case "$status" in
+            2??) exit 0 ;;
+            *) echo "Supabase health check failed" >&2; exit 1 ;;
+          esac
